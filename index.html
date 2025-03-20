@@ -86,8 +86,10 @@
 
       // Function to calculate the city rate per square kilometer (normalize by area)
       function calculateRate(polygon, cityCount) {
-        const area = L.geoJSON(polygon).getBounds();  // Simplified area, may need refinement
-        const areaInSquareKm = area.getArea() / 1000000; // Approximate area in km²
+        // Use Turf.js to calculate the area in square meters
+        const areaInSquareMeters = turf.area(polygon); // Area in square meters
+        const areaInSquareKm = areaInSquareMeters / 1000000; // Convert to square kilometers
+
         return cityCount / areaInSquareKm;  // Return rate per square km
       }
 
