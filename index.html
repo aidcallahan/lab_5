@@ -38,46 +38,38 @@
     <div id="legend2" class="legend"></div>
   </div>
 
-  <!-- Leaflet and Turf.js libraries -->
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-choropleth/0.0.6/choropleth.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf"></script>
 
   <script>
-    // Variables for storing the GeoJSON data
     let citiesData, droughtData;
 
-    // Fetch the major cities GeoJSON data from GitHub repository (update URL to your raw GitHub URL)
     fetch('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson')
       .then(response => response.json())
       .then(data => {
         citiesData = data;
-        initMaps();  // Initialize maps once the cities data is fetched
+        initMaps();
       });
 
-    // Fetch the drought polygons GeoJSON data from GitHub repository (update URL to your raw GitHub URL)
     fetch('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.json')
       .then(response => response.json())
       .then(data => {
         droughtData = data;
-        initMaps();  // Initialize maps once the drought data is fetched
+        initMaps();
       });
 
-    // Function to initialize both maps
     function initMaps() {
       if (!citiesData || !droughtData) return;
 
-      // Leaflet map setup
-      const map1 = L.map('map1').setView([37.8, -96], 5);  // Centering map at the US
+      const map1 = L.map('map1').setView([37.8, -96], 5);
       const map2 = L.map('map2').setView([37.8, -96], 5);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map1);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2);
 
-      // Filter drought polygons (remove D = 0 and D = 1)
       const droughtPolygons = droughtData.features.filter(feature => feature.properties.DM > 1);
 
-      // Function to calculate the number of cities in a drought polygon
       function countCitiesInPolygon(polygon) {
         const count = citiesData.features.filter(city => {
           const lat = city.geometry.coordinates[1];
@@ -87,14 +79,23 @@
         return count;
       }
 
-      // Function to calculate the rate of cities per area (normalized)
       function calculateRate(polygon, cityCount) {
-        const area = turf.area(polygon);  // Use Turf.js to calculate the area of the polygon
-        const areaInSquareKm = area / 1000000; // Convert area to square kilometers
-        return cityCount / areaInSquareKm;  // Return rate per square km
+        let area = 0;
+
+        if (polygon.geometry.type === "MultiPolygon") {
+          polygon.geometry.coordinates.forEach(polygonCoords => {
+            const singlePolygon = turf.polygon(polygonCoords);
+            area += turf.area(singlePolygon);
+          });
+        } else if (polygon.geometry.type === "Polygon") {
+          const singlePolygon = turf.polygon(polygon.geometry.coordinates);
+          area = turf.area(singlePolygon);
+        }
+
+        const areaInSquareKm = area / 1000000;
+        return cityCount / areaInSquareKm;
       }
 
-      // Prepare data for choropleth maps
       const countData = {};
       const rateData = {};
 
@@ -102,12 +103,10 @@
         const cityCount = countCitiesInPolygon(polygon);
         countData[polygon.properties.id] = cityCount;
 
-        // Calculate rate for the second map (cities per square kilometer)
         const rate = calculateRate(polygon, cityCount);
         rateData[polygon.properties.id] = rate;
       });
 
-      // Function to style polygons based on city count
       function getCountStyle(d) {
         return {
           fillColor: d > 50 ? 'red' : d > 20 ? 'orange' : 'green',
@@ -118,7 +117,6 @@
         };
       }
 
-      // Function to style polygons based on city rate
       function getRateStyle(d) {
         return {
           fillColor: d > 1 ? 'red' : d > 0.5 ? 'orange' : 'green',
@@ -129,7 +127,6 @@
         };
       }
 
-      // Create choropleth map based on city counts
       L.geoJSON(droughtPolygons, {
         style: feature => getCountStyle(countData[feature.properties.id]),
         onEachFeature: function (feature, layer) {
@@ -137,7 +134,6 @@
         }
       }).addTo(map1);
 
-      // Create choropleth map based on city rate
       L.geoJSON(droughtPolygons, {
         style: feature => getRateStyle(rateData[feature.properties.id]),
         onEachFeature: function (feature, layer) {
@@ -145,7 +141,6 @@
         }
       }).addTo(map2);
 
-      // Add legends to both maps
       function addLegend(legendId, title, colors, labels) {
         const legend = document.getElementById(legendId);
         legend.innerHTML = `<strong>${title}</strong><br>`;
@@ -154,7 +149,6 @@
         }
       }
 
-      // Legends for count and rate maps
       addLegend('legend1', 'City Count by Drought Area', ['green', 'orange', 'red'], ['0-20 Cities', '20-50 Cities', '50+ Cities']);
       addLegend('legend2', 'City Rate per km²', ['green', 'orange', 'red'], ['0-0.5 Cities/km²', '0.5-1 Cities/km²', '1+ Cities/km²']);
     }
