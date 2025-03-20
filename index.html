@@ -45,16 +45,16 @@
     // Variables for storing the GeoJSON data
     let citiesData, droughtData;
 
-    // Fetch the major cities GeoJSON data
-    fetch('USA_Major_Cities.geojson')
+    // Fetch the major cities GeoJSON data from GitHub repository (update URL to your raw GitHub URL)
+    fetch('https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO_NAME/main/USA_Major_Cities.geojson')
       .then(response => response.json())
       .then(data => {
         citiesData = data;
         initMaps();  // Initialize maps once the cities data is fetched
       });
 
-    // Fetch the drought polygons GeoJSON data
-    fetch('usdm_current.json')
+    // Fetch the drought polygons GeoJSON data from GitHub repository (update URL to your raw GitHub URL)
+    fetch('https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO_NAME/main/usdm_current.json')
       .then(response => response.json())
       .then(data => {
         droughtData = data;
