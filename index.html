@@ -13,7 +13,7 @@
 <body>
   <h1>Drought Intensity and City Counts</h1>
   <div id="map1"></div>
-  <h2>Map 1: City Counts by Drought Intensity</h2>
+  <h2>Map 1: City Counts for Any Drought (DM 2-4)</h2>
   <div id="map2"></div>
   <h2>Map 2: City Counts Normalized by Population Density</h2>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -39,7 +39,12 @@
     function processData() {
       if (!cityData || !polygonData) return;
 
-      polygonData.features.forEach(function(polygon) {
+      const filteredPolygons = polygonData.features.filter(function(polygon) {
+        const droughtLevel = polygon.properties.DM;
+        return droughtLevel >= 2;  // Only keep polygons with DM 2, 3, or 4
+      });
+
+      filteredPolygons.forEach(function(polygon) {
         polygon.cityCount = 0;
         cityData.features.forEach(function(city) {
           if (isPointInPolygon(city.geometry.coordinates, polygon.geometry.coordinates)) {
@@ -48,7 +53,7 @@
         });
       });
 
-      const choropleth1 = L.geoJson(polygonData, {
+      const choropleth1 = L.geoJson(filteredPolygons, {
         style: function(feature) {
           return { 
             fillColor: getColor(feature.properties.DM), 
@@ -72,7 +77,7 @@
       };
       legend1.addTo(map1);
 
-      const choropleth2 = L.geoJson(polygonData, {
+      const choropleth2 = L.geoJson(filteredPolygons, {
         style: function(feature) {
           const normalizedValue = feature.cityCount / getPopulationDensity(feature);
           return { 
@@ -116,7 +121,6 @@
         case 4: return '#f03b20'; // Worst
         case 3: return '#fc4e2a';
         case 2: return '#fd8d3c';
-        case 1: return '#fee5d9';
         default: return '#bdbdbd'; // No drought
       }
     }
