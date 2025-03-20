@@ -18,6 +18,7 @@
   <h2>Map 2: City Counts Normalized by Population Density</h2>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/turf@6.5.0/turf.min.js"></script>
   <script>
     const map1 = L.map('map1').setView([37.8, -96], 4);
     const map2 = L.map('map2').setView([37.8, -96], 4);
@@ -104,16 +105,9 @@
     }
 
     function isPointInPolygon(point, polygon) {
-      const x = point[0], y = point[1];
-      const polygonPath = polygon[0]; 
-      let inside = false;
-      for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
-        const xi = polygonPath[i][0], yi = polygonPath[i][1];
-        const xj = polygonPath[j][0], yj = polygonPath[j][1];
-        const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-        if (intersect) inside = !inside;
-      }
-      return inside;
+      const cityPoint = turf.point(point); // Create a point feature from city coordinates
+      const polygonFeature = turf.polygon([polygon[0]]); // Create a polygon feature from the polygon coordinates
+      return turf.booleanPointInPolygon(cityPoint, polygonFeature); // Check if city point is inside polygon
     }
 
     function getColor(droughtLevel) {
