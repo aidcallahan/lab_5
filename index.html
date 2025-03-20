@@ -3,127 +3,158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drought Intensity and City Counts</title>
+  <title>Drought Choropleth Maps</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <style>
-    #map1, #map2 { width: 100%; height: 500px; }
-    .legend { background-color: white; border-radius: 5px; padding: 10px; }
+    #map1, #map2 {
+      height: 500px;
+      width: 100%;
+    }
+    .map-container {
+      margin-bottom: 40px;
+    }
+    .legend {
+      background-color: white;
+      border: 2px solid gray;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <h1>Drought Intensity and City Counts</h1>
-  <div id="map1"></div>
-  <h2>Map 1: City Counts for Any Drought (DM 2-4)</h2>
-  <div id="map2"></div>
-  <h2>Map 2: City Counts Normalized by Population Density</h2>
-  
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <h1>Drought Impact and Rates in the US</h1>
+
+  <div class="map-container">
+    <h2>Total Cities in Drought Areas</h2>
+    <div id="map1"></div>
+    <div id="legend1" class="legend"></div>
+  </div>
+
+  <div class="map-container">
+    <h2>City Rate per Drought Area</h2>
+    <div id="map2"></div>
+    <div id="legend2" class="legend"></div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <!-- Load Turf.js from a CDN (make sure this is before your custom script) -->
-  <script src="https://unpkg.com/@turf/turf"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-choropleth/0.0.6/choropleth.min.js"></script>
 
   <script>
-    const map1 = L.map('map1').setView([37.8, -96], 4);
-    const map2 = L.map('map2').setView([37.8, -96], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map1);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2);
+    // Variables for storing the GeoJSON data
+    let citiesData, droughtData;
 
-    let cityData, polygonData;
-
-    // Fetch the city data and drought data
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson', function(data) {
-      cityData = data;
-      processData();
-    });
-
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.json', function(data) {
-      polygonData = data;
-      processData();
-    });
-
-    function processData() {
-      if (!cityData || !polygonData) return;
-
-      // Filter polygons based on drought intensity (DM 2, 3, 4)
-      const filteredPolygons = polygonData.features.filter(function(polygon) {
-        const droughtLevel = polygon.properties.DM;
-        return droughtLevel >= 2;  // Only include DM 2, 3, and 4
+    // Fetch the major cities GeoJSON data
+    fetch('USA_Major_Cities.geojson')
+      .then(response => response.json())
+      .then(data => {
+        citiesData = data;
+        initMaps();  // Initialize maps once the cities data is fetched
       });
 
-      filteredPolygons.forEach(function(polygon) {
-        polygon.cityCount = 0;
-
-        // For each city, check if it's inside any of the polygons
-        cityData.features.forEach(function(city) {
-          // Check if the city's coordinates are within the polygon using Turf.js
-          polygon.geometry.coordinates.forEach(function(ring) {
-            const polygonShape = turf.polygon(ring);
-
-            // Turf.js booleanPointInPolygon to check if the city point is inside the polygon
-            if (turf.booleanPointInPolygon(turf.point(city.geometry.coordinates), polygonShape)) {
-              polygon.cityCount += 1;
-            }
-          });
-        });
+    // Fetch the drought polygons GeoJSON data
+    fetch('usdm_current.json')
+      .then(response => response.json())
+      .then(data => {
+        droughtData = data;
+        initMaps();  // Initialize maps once the drought data is fetched
       });
 
-      // Add choropleth maps for the filtered polygons and city count
-      const choropleth1 = L.geoJson(filteredPolygons, {
-        style: function(feature) {
-          return { 
-            fillColor: getColor(feature.cityCount), 
-            weight: 2, 
-            opacity: 1, 
-            color: 'white', 
-            dashArray: '3', 
-            fillOpacity: 0.7 
-          };
-        },
-        onEachFeature: function(feature, layer) {
-          layer.bindPopup("Drought Intensity: " + feature.properties.DM + "<br>City Count: " + feature.cityCount);
+    // Function to initialize both maps
+    function initMaps() {
+      if (!citiesData || !droughtData) return;
+
+      // Leaflet map setup
+      const map1 = L.map('map1').setView([37.8, -96], 5);  // Centering map at the US
+      const map2 = L.map('map2').setView([37.8, -96], 5);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map1);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2);
+
+      // Filter drought polygons (remove D = 0 and D = 1)
+      const droughtPolygons = droughtData.features.filter(feature => feature.properties.DM > 1);
+
+      // Function to calculate the number of cities in a drought polygon
+      function countCitiesInPolygon(polygon) {
+        const count = citiesData.features.filter(city => {
+          const lat = city.geometry.coordinates[1];
+          const lon = city.geometry.coordinates[0];
+          return L.geoJSON(polygon).getBounds().contains([lat, lon]);
+        }).length;
+        return count;
+      }
+
+      // Function to calculate the rate of cities per area (normalized)
+      function calculateRate(polygon, cityCount) {
+        const area = L.geoJSON(polygon).getBounds();  // This is a simplified area, you may want to calculate actual area
+        const areaInSquareKm = area.getArea() / 1000000; // Approximate area in km²
+        return cityCount / areaInSquareKm;  // Return rate per square km
+      }
+
+      // Prepare data for choropleth maps
+      const countData = {};
+      const rateData = {};
+
+      droughtPolygons.forEach(polygon => {
+        const cityCount = countCitiesInPolygon(polygon);
+        countData[polygon.properties.id] = cityCount;
+
+        // Calculate rate for the second map (cities per square kilometer)
+        const rate = calculateRate(polygon, cityCount);
+        rateData[polygon.properties.id] = rate;
+      });
+
+      // Function to style polygons based on city count
+      function getCountStyle(d) {
+        return {
+          fillColor: d > 50 ? 'red' : d > 20 ? 'orange' : 'green',
+          weight: 2,
+          opacity: 1,
+          color: 'white',
+          fillOpacity: 0.7
+        };
+      }
+
+      // Function to style polygons based on city rate
+      function getRateStyle(d) {
+        return {
+          fillColor: d > 1 ? 'red' : d > 0.5 ? 'orange' : 'green',
+          weight: 2,
+          opacity: 1,
+          color: 'white',
+          fillOpacity: 0.7
+        };
+      }
+
+      // Create choropleth map based on city counts
+      L.geoJSON(droughtPolygons, {
+        style: feature => getCountStyle(countData[feature.properties.id]),
+        onEachFeature: function (feature, layer) {
+          layer.bindPopup(`${feature.properties.name}<br>City Count: ${countData[feature.properties.id]}`);
         }
       }).addTo(map1);
 
-      const legend1 = L.control({ position: 'bottomright' });
-      legend1.onAdd = function() {
-        const div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = `<b>City Count Legend</b><br>Low: <span style="background-color:#fee5d9"></span><br>High: <span style="background-color:#f03b20"></span><br>`;
-        return div;
-      };
-      legend1.addTo(map1);
-
-      const choropleth2 = L.geoJson(filteredPolygons, {
-        style: function(feature) {
-          const normalizedValue = feature.cityCount / getPopulationDensity(feature);
-          return { 
-            fillColor: getColor(normalizedValue), 
-            weight: 2, 
-            opacity: 1, 
-            color: 'white', 
-            dashArray: '3', 
-            fillOpacity: 0.7 
-          };
-        },
-        onEachFeature: function(feature, layer) {
-          layer.bindPopup("Drought Intensity: " + feature.properties.DM + "<br>Normalized City Count: " + (feature.cityCount / getPopulationDensity(feature)));
+      // Create choropleth map based on city rate
+      L.geoJSON(droughtPolygons, {
+        style: feature => getRateStyle(rateData[feature.properties.id]),
+        onEachFeature: function (feature, layer) {
+          layer.bindPopup(`${feature.properties.name}<br>City Rate: ${rateData[feature.properties.id].toFixed(2)}`);
         }
       }).addTo(map2);
 
-      const legend2 = L.control({ position: 'bottomright' });
-      legend2.onAdd = function() {
-        const div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = `<b>Normalized City Count Legend</b><br>Low: <span style="background-color:#fee5d9"></span><br>High: <span style="background-color:#f03b20"></span><br>`;
-        return div;
-      };
-      legend2.addTo(map2);
-    }
+      // Add legends to both maps
+      function addLegend(legendId, title, colors, labels) {
+        const legend = document.getElementById(legendId);
+        legend.innerHTML = `<strong>${title}</strong><br>`;
+        for (let i = 0; i < colors.length; i++) {
+          legend.innerHTML += `<i style="background:${colors[i]}"></i> ${labels[i]}<br>`;
+        }
+      }
 
-    function getColor(value) {
-      return value > 5 ? '#800026' : value > 4 ? '#BD0026' : value > 3 ? '#E31A1C' : value > 2 ? '#FC4E2A' : value > 1 ? '#FD8D3C' : '#FFEDA0';
-    }
-
-    function getPopulationDensity(feature) {
-      return feature.properties.pop_density || 1;
+      // Legends for count and rate maps
+      addLegend('legend1', 'City Count by Drought Area', ['green', 'orange', 'red'], ['0-20 Cities', '20-50 Cities', '50+ Cities']);
+      addLegend('legend2', 'City Rate per km²', ['green', 'orange', 'red'], ['0-0.5 Cities/km²', '0.5-1 Cities/km²', '1+ Cities/km²']);
     }
   </script>
 </body>
