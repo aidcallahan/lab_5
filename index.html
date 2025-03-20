@@ -26,11 +26,11 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map1);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2);
     let cityData, polygonData;
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab5/main/USA_Major_Cities.geojson', function(data) {
+    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson', function(data) {
       cityData = data;
       processData();
     });
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab5/main/usdm_current.geojson', function(data) {
+    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.geojson', function(data) {
       polygonData = data;
       processData();
     });
