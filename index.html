@@ -71,11 +71,17 @@
       const droughtPolygons = droughtData.features.filter(feature => feature.properties.DM > 1);
 
       function countCitiesInPolygon(polygon) {
-        const count = citiesData.features.filter(city => {
-          const lat = city.geometry.coordinates[1];
-          const lon = city.geometry.coordinates[0];
-          return L.geoJSON(polygon).getBounds().contains([lat, lon]);
-        }).length;
+        let count = 0;
+
+        citiesData.features.forEach(city => {
+          const cityPoint = turf.point(city.geometry.coordinates);
+          const polygonGeoJSON = turf.multiPolygon(polygon.geometry.coordinates);
+          
+          if (turf.booleanPointInPolygon(cityPoint, polygonGeoJSON)) {
+            count++;
+          }
+        });
+
         return count;
       }
 
@@ -107,9 +113,17 @@
         rateData[polygon.properties.id] = rate;
       });
 
-      function getCountStyle(d) {
+      function getCountStyle(d, droughtLevel) {
+        let color = '';
+        if (droughtLevel === 2) {
+          color = d > 50 ? 'darkyellow' : d > 20 ? 'yellow' : 'lightyellow';
+        } else if (droughtLevel === 3) {
+          color = d > 50 ? 'orange' : d > 20 ? 'darkorange' : 'lightorange';
+        } else if (droughtLevel === 4) {
+          color = d > 50 ? 'red' : d > 20 ? 'darkred' : 'lightred';
+        }
         return {
-          fillColor: d > 50 ? 'red' : d > 20 ? 'orange' : 'green',
+          fillColor: color,
           weight: 2,
           opacity: 1,
           color: 'white',
@@ -117,9 +131,17 @@
         };
       }
 
-      function getRateStyle(d) {
+      function getRateStyle(d, droughtLevel) {
+        let color = '';
+        if (droughtLevel === 2) {
+          color = d > 1 ? 'darkyellow' : d > 0.5 ? 'yellow' : 'lightyellow';
+        } else if (droughtLevel === 3) {
+          color = d > 1 ? 'orange' : d > 0.5 ? 'darkorange' : 'lightorange';
+        } else if (droughtLevel === 4) {
+          color = d > 1 ? 'red' : d > 0.5 ? 'darkred' : 'lightred';
+        }
         return {
-          fillColor: d > 1 ? 'red' : d > 0.5 ? 'orange' : 'green',
+          fillColor: color,
           weight: 2,
           opacity: 1,
           color: 'white',
@@ -128,14 +150,18 @@
       }
 
       L.geoJSON(droughtPolygons, {
-        style: feature => getCountStyle(countData[feature.properties.id]),
+        style: function (feature) {
+          return getCountStyle(countData[feature.properties.id], feature.properties.DM);
+        },
         onEachFeature: function (feature, layer) {
           layer.bindPopup(`${feature.properties.name}<br>City Count: ${countData[feature.properties.id]}`);
         }
       }).addTo(map1);
 
       L.geoJSON(droughtPolygons, {
-        style: feature => getRateStyle(rateData[feature.properties.id]),
+        style: function (feature) {
+          return getRateStyle(rateData[feature.properties.id], feature.properties.DM);
+        },
         onEachFeature: function (feature, layer) {
           layer.bindPopup(`${feature.properties.name}<br>City Rate: ${rateData[feature.properties.id].toFixed(2)}`);
         }
@@ -149,8 +175,8 @@
         }
       }
 
-      addLegend('legend1', 'City Count by Drought Area', ['green', 'orange', 'red'], ['0-20 Cities', '20-50 Cities', '50+ Cities']);
-      addLegend('legend2', 'City Rate per km²', ['green', 'orange', 'red'], ['0-0.5 Cities/km²', '0.5-1 Cities/km²', '1+ Cities/km²']);
+      addLegend('legend1', 'City Count by Drought Area', ['lightyellow', 'yellow', 'darkyellow', 'lightorange', 'darkorange', 'orange', 'lightred', 'darkred', 'red'], ['0-20 Cities', '20-50 Cities', '50+ Cities']);
+      addLegend('legend2', 'City Rate per km² by Drought Area', ['lightyellow', 'yellow', 'darkyellow', 'lightorange', 'darkorange', 'orange', 'lightred', 'darkred', 'red'], ['0-0.5 Cities/km²', '0.5-1 Cities/km²', '1+ Cities/km²']);
     }
   </script>
 </body>
