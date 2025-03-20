@@ -19,8 +19,8 @@
   
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <!-- Load Turf.js from a CDN -->
-  <script src="https://unpkg.com/@turf/turf"></script> 
+  <!-- Load Turf.js from a CDN (make sure this is before your custom script) -->
+  <script src="https://unpkg.com/@turf/turf"></script>
 
   <script>
     const map1 = L.map('map1').setView([37.8, -96], 4);
@@ -53,14 +53,14 @@
       filteredPolygons.forEach(function(polygon) {
         polygon.cityCount = 0;
 
+        // For each city, check if it's inside any of the polygons
         cityData.features.forEach(function(city) {
-          // Create turf point for city
-          const cityPoint = turf.point(city.geometry.coordinates);
-
-          // Check if the city point is inside the polygon (multi-polygon handling)
+          // Check if the city's coordinates are within the polygon using Turf.js
           polygon.geometry.coordinates.forEach(function(ring) {
             const polygonShape = turf.polygon(ring);
-            if (turf.booleanPointInPolygon(cityPoint, polygonShape)) {
+
+            // Turf.js booleanPointInPolygon to check if the city point is inside the polygon
+            if (turf.booleanPointInPolygon(turf.point(city.geometry.coordinates), polygonShape)) {
               polygon.cityCount += 1;
             }
           });
