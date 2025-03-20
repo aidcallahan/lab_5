@@ -52,7 +52,7 @@
 
       const choropleth1 = L.geoJson(polygonData, {
         style: function(feature) {
-          return { fillColor: getColor(feature.cityCount), weight: 2, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.7 };
+          return { fillColor: getColor(feature.properties.DM), weight: 2, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.7 };
         },
         onEachFeature: function(feature, layer) {
           layer.bindPopup("Drought Intensity: " + feature.properties.DM + "<br>City Count: " + feature.cityCount);
@@ -88,14 +88,23 @@
 
     function isPointInPolygon(point, polygon) {
       const x = point[0], y = point[1];
-      const inside = polygon[0].some(function(coord, i, arr) {
-        return coord[0] <= x && coord[1] <= y;
-      });
+      const polygonPath = polygon[0]; 
+      let inside = false;
+      for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
+        const xi = polygonPath[i][0], yi = polygonPath[i][1];
+        const xj = polygonPath[j][0], yj = polygonPath[j][1];
+        const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+        if (intersect) inside = !inside;
+      }
       return inside;
     }
 
-    function getColor(value) {
-      return value > 5 ? '#800026' : value > 4 ? '#BD0026' : value > 3 ? '#E31A1C' : value > 2 ? '#FC4E2A' : value > 1 ? '#FD8D3C' : '#FFEDA0';
+    function getColor(droughtLevel) {
+      if (droughtLevel == 4) return '#f03b20';
+      if (droughtLevel == 3) return '#fc4e2a';
+      if (droughtLevel == 2) return '#fd8d3c';
+      if (droughtLevel == 1) return '#fee5d9';
+      return '#grey'; // No drought (DM == 0)
     }
 
     function getPopulationDensity(feature) {
