@@ -40,33 +40,33 @@
 
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-choropleth/0.0.6/choropleth.min.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/dist/turf.min.js"></script> <!-- Correct Turf.js version -->
 
   <script>
-    // Variables for storing the GeoJSON data
     let citiesData, droughtData;
 
-    // Fetch the major cities GeoJSON data from GitHub repository (update URL to your raw GitHub URL)
+    // Fetch the major cities GeoJSON data from GitHub repository
     fetch('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson')
       .then(response => response.json())
       .then(data => {
         citiesData = data;
         initMaps();  // Initialize maps once the cities data is fetched
-      });
+      })
+      .catch(error => console.error('Error fetching cities data:', error));
 
-    // Fetch the drought polygons GeoJSON data from GitHub repository (update URL to your raw GitHub URL)
+    // Fetch the drought polygons GeoJSON data from GitHub repository
     fetch('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.json')
       .then(response => response.json())
       .then(data => {
         droughtData = data;
         initMaps();  // Initialize maps once the drought data is fetched
-      });
+      })
+      .catch(error => console.error('Error fetching drought data:', error));
 
-    // Function to initialize both maps
     function initMaps() {
       if (!citiesData || !droughtData) return;
 
-      // Leaflet map setup
-      const map1 = L.map('map1').setView([37.8, -96], 5);  // Centering map at the US
+      const map1 = L.map('map1').setView([37.8, -96], 5);  // Center map at the US
       const map2 = L.map('map2').setView([37.8, -96], 5);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map1);
@@ -75,19 +75,18 @@
       // Filter drought polygons (remove D = 0 and D = 1)
       const droughtPolygons = droughtData.features.filter(feature => feature.properties.DM > 1);
 
-      // Function to calculate the number of cities in a drought polygon
+      // Function to count cities inside a polygon
       function countCitiesInPolygon(polygon) {
-        const count = citiesData.features.filter(city => {
+        return citiesData.features.filter(city => {
           const lat = city.geometry.coordinates[1];
           const lon = city.geometry.coordinates[0];
           return L.geoJSON(polygon).getBounds().contains([lat, lon]);
         }).length;
-        return count;
       }
 
-      // Function to calculate the rate of cities per area (normalized)
+      // Function to calculate the city rate per square kilometer (normalize by area)
       function calculateRate(polygon, cityCount) {
-        const area = L.geoJSON(polygon).getBounds();  // This is a simplified area, you may want to calculate actual area
+        const area = L.geoJSON(polygon).getBounds();  // Simplified area, may need refinement
         const areaInSquareKm = area.getArea() / 1000000; // Approximate area in km²
         return cityCount / areaInSquareKm;  // Return rate per square km
       }
@@ -100,7 +99,7 @@
         const cityCount = countCitiesInPolygon(polygon);
         countData[polygon.properties.id] = cityCount;
 
-        // Calculate rate for the second map (cities per square kilometer)
+        // Calculate rate for the second map
         const rate = calculateRate(polygon, cityCount);
         rateData[polygon.properties.id] = rate;
       });
