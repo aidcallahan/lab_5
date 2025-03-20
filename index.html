@@ -6,12 +6,12 @@
   
     let cityData, polygonData;
     
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson', function(data) {
+    $.getJSON('https://github.com/aidcallahan/lab_5/blob/ea369cad2b27eed651260c4fb31d1cf2e0c28ae4/USA_Major_Cities.geojson', function(data) {
       cityData = data;
       processData();
     });
     
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.json', function(data) {
+    $.getJSON('https://github.com/aidcallahan/lab_5/blob/ea369cad2b27eed651260c4fb31d1cf2e0c28ae4/usdm_current.json', function(data) {
       polygonData = data;
       processData();
     });
