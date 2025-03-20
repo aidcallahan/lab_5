@@ -52,12 +52,27 @@
         polygon.cityCount = 0;
 
         cityData.features.forEach(function(city) {
-          // Debug: check the city coordinates
-          console.log("City Coordinates:", city.geometry.coordinates);
+          // Convert city coordinates to [longitude, latitude] format for turf.js compatibility
+          const cityPoint = turf.point([city.geometry.coordinates[0], city.geometry.coordinates[1]]);
 
-          // Check if city is inside polygon
-          if (isPointInPolygon(city.geometry.coordinates, polygon.geometry.coordinates)) {
-            polygon.cityCount += 1;
+          // Handle MultiPolygon (Polygon that has multiple rings)
+          if (polygon.geometry.type === "MultiPolygon") {
+            polygon.geometry.coordinates.forEach(function(ring) {
+              const polygonFeature = turf.polygon(ring);
+
+              // Check if the city point is inside any of the polygons (rings)
+              if (turf.booleanPointInPolygon(cityPoint, polygonFeature)) {
+                polygon.cityCount += 1;
+              }
+            });
+          } else if (polygon.geometry.type === "Polygon") {
+            // Handle single Polygon
+            const polygonFeature = turf.polygon(polygon.geometry.coordinates);
+
+            // Check if the city point is inside the polygon
+            if (turf.booleanPointInPolygon(cityPoint, polygonFeature)) {
+              polygon.cityCount += 1;
+            }
           }
         });
 
@@ -112,12 +127,6 @@
         return div;
       };
       legend2.addTo(map2);
-    }
-
-    function isPointInPolygon(point, polygon) {
-      const cityPoint = turf.point([point[0], point[1]]); // [longitude, latitude]
-      const polygonFeature = turf.polygon([polygon[0]]); // GeoJSON polygon format
-      return turf.booleanPointInPolygon(cityPoint, polygonFeature); // Check if city point is inside polygon
     }
 
     function getColor(droughtLevel) {
