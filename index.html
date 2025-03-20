@@ -1,39 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drought Intensity and City Counts</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-choropleth/dist/leaflet-choropleth.css" />
-  <style>
-    #map1, #map2 { width: 100%; height: 500px; }
-    .legend { background-color: white; border-radius: 5px; padding: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Drought Intensity and City Counts</h1>
-  <div id="map1"></div>
-  <h2>Map 1: City Counts by Drought Intensity</h2>
-  <div id="map2"></div>
-  <h2>Map 2: City Counts Normalized by Population Density</h2>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-choropleth/dist/leaflet-choropleth.js"></script>
-  <script>
+<script>
     const map1 = L.map('map1').setView([37.8, -96], 4);
     const map2 = L.map('map2').setView([37.8, -96], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map1);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2);
+  
     let cityData, polygonData;
+    
     $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson', function(data) {
       cityData = data;
       processData();
     });
-    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.geojson', function(data) {
+    
+    $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.json', function(data) {
       polygonData = data;
       processData();
     });
+  
     function processData() {
       if (!cityData || !polygonData) return;
       polygonData.features.forEach(function(polygon) {
@@ -52,6 +34,7 @@
           layer.bindPopup("Drought Intensity: " + feature.properties.DM + "<br>City Count: " + feature.cityCount);
         }
       }).addTo(map1);
+  
       const legend1 = L.control({ position: 'bottomright' });
       legend1.onAdd = function() {
         const div = L.DomUtil.create('div', 'legend');
@@ -59,6 +42,7 @@
         return div;
       };
       legend1.addTo(map1);
+  
       const choropleth2 = L.geoJson(polygonData, {
         style: function(feature) {
           const normalizedValue = feature.cityCount / getPopulationDensity(feature);
@@ -68,6 +52,7 @@
           layer.bindPopup("Drought Intensity: " + feature.properties.DM + "<br>Normalized City Count: " + (feature.cityCount / getPopulationDensity(feature)));
         }
       }).addTo(map2);
+  
       const legend2 = L.control({ position: 'bottomright' });
       legend2.onAdd = function() {
         const div = L.DomUtil.create('div', 'legend');
@@ -76,6 +61,7 @@
       };
       legend2.addTo(map2);
     }
+  
     function isPointInPolygon(point, polygon) {
       const x = point[0], y = point[1];
       const inside = polygon[0].some(function(coord, i, arr) {
@@ -83,12 +69,13 @@
       });
       return inside;
     }
+  
     function getColor(value) {
       return value > 5 ? '#800026' : value > 4 ? '#BD0026' : value > 3 ? '#E31A1C' : value > 2 ? '#FC4E2A' : value > 1 ? '#FD8D3C' : '#FFEDA0';
     }
+  
     function getPopulationDensity(feature) {
       return feature.properties.pop_density || 1;
     }
   </script>
-</body>
-</html>
+  
