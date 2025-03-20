@@ -29,29 +29,39 @@
 
     $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/USA_Major_Cities.geojson', function(data) {
       cityData = data;
+      console.log("City Data:", cityData);  // Debugging line
       processData();
     });
 
     $.getJSON('https://raw.githubusercontent.com/aidcallahan/lab_5/main/usdm_current.json', function(data) {
       polygonData = data;
+      console.log("Polygon Data:", polygonData);  // Debugging line
       processData();
     });
 
     function processData() {
       if (!cityData || !polygonData) return;
 
+      // Filter polygons based on drought intensity (DM 2, 3, 4)
       const filteredPolygons = polygonData.features.filter(function(polygon) {
         const droughtLevel = polygon.properties.DM;
-        return droughtLevel >= 2;  // Only keep polygons with DM 2, 3, or 4
+        return droughtLevel >= 2;  // Only include DM 2, 3, and 4
       });
 
       filteredPolygons.forEach(function(polygon) {
         polygon.cityCount = 0;
+
         cityData.features.forEach(function(city) {
+          // Debug: check the city coordinates
+          console.log("City Coordinates:", city.geometry.coordinates);
+
+          // Check if city is inside polygon
           if (isPointInPolygon(city.geometry.coordinates, polygon.geometry.coordinates)) {
             polygon.cityCount += 1;
           }
         });
+
+        console.log("Polygon ID: ", polygon.properties.GEOID, "City Count: ", polygon.cityCount); // Debugging line
       });
 
       const choropleth1 = L.geoJson(filteredPolygons, {
@@ -105,8 +115,8 @@
     }
 
     function isPointInPolygon(point, polygon) {
-      const cityPoint = turf.point(point); // Create a point feature from city coordinates
-      const polygonFeature = turf.polygon([polygon[0]]); // Create a polygon feature from the polygon coordinates
+      const cityPoint = turf.point([point[0], point[1]]); // [longitude, latitude]
+      const polygonFeature = turf.polygon([polygon[0]]); // GeoJSON polygon format
       return turf.booleanPointInPolygon(cityPoint, polygonFeature); // Check if city point is inside polygon
     }
 
